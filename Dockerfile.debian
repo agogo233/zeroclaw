@@ -154,6 +154,8 @@ COPY --from=builder /app/web/dist /zeroclaw-data/web/dist
 # 复制 builder 阶段创建的完整运行时目录结构（包含 config.toml）
 COPY --from=builder /zeroclaw-data/.zeroclaw /zeroclaw-data/.zeroclaw
 COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
+# 确保权限正确（容器以 65534 用户运行）
+RUN chown -R 65534:65534 /zeroclaw-data
 
 # Environment setup
 # Ensure UTF-8 locale so CJK / multibyte input is handled correctly
