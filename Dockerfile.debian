@@ -3,10 +3,15 @@
 # ── Stage 0: Frontend build ─────────────────────────────────────
 FROM node:22-alpine AS web-builder
 WORKDIR /web
+ENV NPM_CONFIG_CACHE=/root/.npm
 COPY web/package.json web/package-lock.json* ./
-RUN npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --prefer-offline --no-audit 2>/dev/null || \
+    npm install --ignore-scripts --prefer-offline --no-audit
 COPY web/ .
-RUN npm run build
+RUN --mount=type=cache,target=/root/.npm \
+    npm run build && \
+    test -f dist/index.html || (echo "ERROR: frontend build failed: index.html missing" && exit 1)
 
 # Dockerfile.debian — Shell-equipped variant of the ZeroClaw container.
 #
@@ -38,22 +43,49 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # 1. Copy manifests to cache dependencies
 COPY Cargo.toml Cargo.lock ./
-# Copy every workspace-member manifest in one glob — adding or removing a crate
-# no longer requires editing this file.  --parents preserves the
-# crates/<name>/Cargo.toml directory structure.
-# aardvark-sys has an implicit build script (build.rs at its crate root) that
-# Cargo must compile during the dependency pre-fetch step; copy it explicitly.
-COPY --parents crates/*/Cargo.toml ./
-COPY --parents crates/aardvark-sys/build.rs ./
+# Copy every workspace-member manifest; preserving directory structure is
+# required for Cargo workspace member detection.
+COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/build.rs crates/aardvark-sys/
+COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
+COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
+COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
+COPY crates/zeroclaw-tools/Cargo.toml crates/zeroclaw-tools/
+COPY crates/zeroclaw-memory/Cargo.toml crates/zeroclaw-memory/
+COPY crates/zeroclaw-providers/Cargo.toml crates/zeroclaw-providers/
+COPY crates/zeroclaw-infra/Cargo.toml crates/zeroclaw-infra/
+COPY crates/zeroclaw-runtime/Cargo.toml crates/zeroclaw-runtime/
+COPY crates/zeroclaw-gateway/Cargo.toml crates/zeroclaw-gateway/
+COPY crates/zeroclaw-tui/Cargo.toml crates/zeroclaw-tui/
+COPY crates/zeroclaw-plugins/Cargo.toml crates/zeroclaw-plugins/
+COPY crates/zeroclaw-hardware/Cargo.toml crates/zeroclaw-hardware/
+COPY crates/zeroclaw-macros/Cargo.toml crates/zeroclaw-macros/
+COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parser/
+COPY crates/robot-kit/Cargo.toml crates/robot-kit/
 # apps/tauri: .dockerignore whitelists only Cargo.toml; src is stubbed below.
-COPY apps/tauri/Cargo.toml apps/tauri/Cargo.toml
-# Create dummy targets for all workspace members so manifest parsing succeeds.
+COPY apps/tauri/Cargo.toml apps/tauri/
+# Create dummy targets for workspace root only; copy real sources for all internal crates.
 RUN mkdir -p src benches apps/tauri/src \
-    && echo "fn main() {}" > src/main.rs \
-    && echo "" > src/lib.rs \
-    && echo "fn main() {}" > benches/agent_benchmarks.rs \
-    && echo "fn main() {}" > apps/tauri/src/main.rs \
-    && for d in crates/*/; do mkdir -p "${d}src" && printf '' > "${d}src/lib.rs"; done
+&& echo "fn main() {}" > src/main.rs \
+&& echo "" > src/lib.rs \
+&& echo "fn main() {}" > benches/agent_benchmarks.rs \
+&& echo "fn main() {}" > apps/tauri/src/main.rs \
+&& echo "fn main() {}" > apps/tauri/build.rs
+COPY crates/aardvark-sys/src crates/aardvark-sys/src
+COPY crates/zeroclaw-api/src crates/zeroclaw-api/src
+COPY crates/zeroclaw-config/src crates/zeroclaw-config/src
+COPY crates/zeroclaw-channels/src crates/zeroclaw-channels/src
+COPY crates/zeroclaw-tools/src crates/zeroclaw-tools/src
+COPY crates/zeroclaw-memory/src crates/zeroclaw-memory/src
+COPY crates/zeroclaw-providers/src crates/zeroclaw-providers/src
+COPY crates/zeroclaw-infra/src crates/zeroclaw-infra/src
+COPY crates/zeroclaw-runtime/src crates/zeroclaw-runtime/src
+COPY crates/zeroclaw-gateway/src crates/zeroclaw-gateway/src
+COPY crates/zeroclaw-tui/src crates/zeroclaw-tui/src
+COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
+COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
+COPY crates/zeroclaw-macros/src crates/zeroclaw-macros/src
+COPY crates/zeroclaw-tool-call-parser/src crates/zeroclaw-tool-call-parser/src
+COPY crates/robot-kit/src crates/robot-kit/src
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
@@ -92,11 +124,12 @@ RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
         'default_model = "anthropic/claude-sonnet-4-20250514"' \
         'default_temperature = 0.7' \
         '' \
-        '[gateway]' \
-        'port = 42617' \
-        'host = "[::]"' \
-        'allow_public_bind = true' \
-        '' \
+         '[gateway]' \
+         'port = 42617' \
+         'host = "[::]"' \
+         'allow_public_bind = true' \
+         'web_dist_dir = "/zeroclaw-data/web/dist"' \
+         '' \
         '[autonomy]' \
         'level = "supervised"' \
         'auto_approve = ["file_read", "file_write", "file_edit", "memory_recall", "memory_store", "web_search_tool", "web_fetch", "calculator", "glob_search", "content_search", "image_info", "weather", "git_operations"]' \
@@ -115,7 +148,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
-COPY --from=builder /zeroclaw-data /zeroclaw-data
+COPY --from=builder /app/web/dist /zeroclaw-data/web/dist
+# 复制 workspace（配置文件已在 builder 阶段创建，无需覆盖）
+COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
 
 # Environment setup
 # Ensure UTF-8 locale so CJK / multibyte input is handled correctly
