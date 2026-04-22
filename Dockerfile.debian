@@ -151,7 +151,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
 COPY --from=builder /app/web/dist /zeroclaw-data/web/dist
-# 复制 workspace（配置文件已在 builder 阶段创建，无需覆盖）
+# 复制 builder 阶段创建的完整运行时目录结构（包含 config.toml）
+COPY --from=builder /zeroclaw-data/.zeroclaw /zeroclaw-data/.zeroclaw
 COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
 
 # Environment setup
