@@ -64,6 +64,7 @@ COPY crates/zeroclaw-memory/src crates/zeroclaw-memory/src
 COPY crates/zeroclaw-providers/src crates/zeroclaw-providers/src
 COPY crates/zeroclaw-infra/src crates/zeroclaw-infra/src
 COPY crates/zeroclaw-runtime/src crates/zeroclaw-runtime/src
+COPY crates/zeroclaw-runtime/locales crates/zeroclaw-runtime/locales
 COPY crates/zeroclaw-gateway/src crates/zeroclaw-gateway/src
 COPY crates/zeroclaw-tui/src crates/zeroclaw-tui/src
 COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
