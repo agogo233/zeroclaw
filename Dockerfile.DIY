@@ -1,0 +1,196 @@
+# syntax=docker/dockerfile:1.7
+
+# ── Stage 0: Build (match runtime glibc baseline) ───────────
+FROM rust:1.94-slim-bookworm AS builder
+
+WORKDIR /app
+ARG ZEROCLAW_CARGO_FEATURES="rag-pdf"
+
+# Install build dependencies and Node.js 22 (required for gen-api: npx openapi-typescript)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
+        pkg-config \
+        curl \
+        g++ \
+        cmake \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1. Copy manifests to cache dependencies
+COPY Cargo.toml Cargo.lock locales.toml ./
+# Copy every workspace-member manifest; preserving directory structure is
+# required for Cargo workspace member detection.
+COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/build.rs crates/aardvark-sys/
+COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
+COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
+COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
+COPY crates/zeroclaw-tools/Cargo.toml crates/zeroclaw-tools/
+COPY crates/zeroclaw-memory/Cargo.toml crates/zeroclaw-memory/
+COPY crates/zeroclaw-providers/Cargo.toml crates/zeroclaw-providers/
+COPY crates/zeroclaw-infra/Cargo.toml crates/zeroclaw-infra/
+COPY crates/zeroclaw-runtime/Cargo.toml crates/zeroclaw-runtime/
+COPY crates/zeroclaw-gateway/Cargo.toml crates/zeroclaw-gateway/
+COPY apps/zerocode/Cargo.toml apps/zerocode/
+COPY crates/zeroclaw-spawn/Cargo.toml crates/zeroclaw-spawn/
+COPY crates/zeroclaw-plugins/Cargo.toml crates/zeroclaw-plugins/
+COPY crates/zeroclaw-hardware/Cargo.toml crates/zeroclaw-hardware/
+COPY crates/zeroclaw-macros/Cargo.toml crates/zeroclaw-macros/
+COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parser/
+COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
+COPY crates/robot-kit/Cargo.toml crates/robot-kit/
+COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
+# apps/tauri: .dockerignore whitelists only Cargo.toml; src is stubbed below.
+COPY apps/tauri/Cargo.toml apps/tauri/
+# Create dummy targets for workspace root only; copy real sources for all internal crates.
+RUN mkdir -p src benches apps/tauri/src apps/zerocode/src src/bin tools/fill-translations/src \
+    crates/zeroclaw-hardware/examples \
+ && echo "fn main() {}" > src/main.rs \
+ && echo "" > src/lib.rs \
+ && echo "fn main() {}" > benches/agent_benchmarks.rs \
+ && echo "fn main() {}" > apps/tauri/src/main.rs \
+ && echo "fn main() {}" > apps/tauri/build.rs \
+ && echo "fn main() {}" > apps/zerocode/src/main.rs \
+ && echo "" > apps/zerocode/src/lib.rs \
+ && echo "fn main() {}" > src/bin/zeroclaw-acp-bridge.rs \
+ && echo "fn main() {}" > tools/fill-translations/src/main.rs \
+ && echo "fn main() {}" > crates/zeroclaw-hardware/examples/esp32_sim.rs
+COPY crates/aardvark-sys/src crates/aardvark-sys/src
+COPY crates/zeroclaw-api/src crates/zeroclaw-api/src
+COPY crates/zeroclaw-config/src crates/zeroclaw-config/src
+COPY crates/zeroclaw-config/fixtures crates/zeroclaw-config/fixtures
+COPY crates/zeroclaw-channels/src crates/zeroclaw-channels/src
+COPY crates/zeroclaw-tools/src crates/zeroclaw-tools/src
+COPY crates/zeroclaw-memory/src crates/zeroclaw-memory/src
+COPY crates/zeroclaw-providers/src crates/zeroclaw-providers/src
+COPY crates/zeroclaw-infra/src crates/zeroclaw-infra/src
+COPY crates/zeroclaw-spawn/src crates/zeroclaw-spawn/src
+COPY crates/zeroclaw-runtime/src crates/zeroclaw-runtime/src
+COPY crates/zeroclaw-runtime/locales crates/zeroclaw-runtime/locales
+COPY crates/zeroclaw-gateway/src crates/zeroclaw-gateway/src
+COPY apps/zerocode/src apps/zerocode/src
+COPY apps/zerocode/build.rs apps/zerocode/
+COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
+COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
+COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
+COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
+COPY crates/zeroclaw-macros/src crates/zeroclaw-macros/src
+COPY crates/zeroclaw-eval/src crates/zeroclaw-eval/src
+COPY crates/zeroclaw-tool-call-parser/src crates/zeroclaw-tool-call-parser/src
+COPY crates/robot-kit/src crates/robot-kit/src
+COPY tools/fill-translations/Cargo.toml tools/fill-translations/
+COPY xtask/ xtask/
+# Copy web/ for gen-api (needs package.json for npm install) and for zerocode build.rs
+COPY web/package.json web/package-lock.json* web/
+COPY web/src/contexts/themes.json web/src/contexts/themes.json
+RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
+    if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
+      cargo build --release --locked --features "$ZEROCLAW_CARGO_FEATURES"; \
+    else \
+      cargo build --release --locked; \
+    fi
+
+# Generate API types for web (requires xtask to be built)
+RUN cargo run --release -p xtask --bin web -- gen-api && \
+    test -f /app/web/src/lib/api-generated.ts || (echo "ERROR: api-generated.ts not generated" && exit 1)
+
+RUN rm -rf src benches
+
+# 2. Copy only build-relevant source paths (avoid cache-busting on docs/tests/scripts)
+COPY src/ src/
+COPY benches/ benches/
+RUN touch src/main.rs src/lib.rs
+RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
+    if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
+      cargo build --release --locked --features "$ZEROCLAW_CARGO_FEATURES"; \
+    else \
+      cargo build --release --locked; \
+    fi && \
+    cp target/release/zeroclaw /app/zeroclaw && \
+    strip /app/zeroclaw
+RUN size=$(stat -c%s /app/zeroclaw) && \
+    if [ "$size" -lt 1000000 ]; then echo "ERROR: binary too small (${size} bytes), likely dummy build artifact" && exit 1; fi
+
+# Prepare runtime directory structure and default config inline (no extra stage).
+RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
+    printf '%s\n' \
+        'workspace_dir = "/zeroclaw-data/workspace"' \
+        'config_path = "/zeroclaw-data/.zeroclaw/config.toml"' \
+        'api_key = ""' \
+        'default_provider = "openrouter"' \
+        'default_model = "anthropic/claude-sonnet-4-20250514"' \
+        'default_temperature = 0.7' \
+        '' \
+         '[gateway]' \
+         'port = 42617' \
+         'host = "[::]"' \
+         'allow_public_bind = true' \
+         'web_dist_dir = "/zeroclaw-data/web/dist"' \
+         '' \
+        '[autonomy]' \
+        'level = "supervised"' \
+        'auto_approve = ["file_read", "file_write", "file_edit", "memory_recall", "memory_store", "web_search_tool", "web_fetch", "calculator", "glob_search", "content_search", "image_info", "weather", "git_operations"]' \
+        > /zeroclaw-data/.zeroclaw/config.toml && \
+    chown -R 65534:65534 /zeroclaw-data
+
+# ── Stage 1: Frontend build ─────────────────────────────────────
+FROM node:22-alpine AS web-builder
+WORKDIR /web
+ENV NPM_CONFIG_CACHE=/root/.npm
+COPY web/package.json web/package-lock.json* web/ ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --prefer-offline --no-audit 2>/dev/null || \
+    npm install --ignore-scripts --prefer-offline --no-audit
+# Copy api-generated.ts from builder stage (generated by cargo web gen-api)
+COPY --from=builder /app/web/src/lib/api-generated.ts src/lib/
+COPY web/src/ ./src/
+COPY web/index.html ./index.html
+COPY web/vite.config.ts ./vite.config.ts
+RUN --mount=type=cache,target=/root/.npm \
+    npm run build && \
+    test -f dist/index.html || (echo "ERROR: frontend build failed: index.html missing" && exit 1)
+
+# ── Stage 2: Runtime (Debian with shell) ─────────────────────
+FROM debian:bookworm-slim AS runtime
+
+# Install essential tools for agent shell operations
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
+COPY --from=web-builder /web/dist /zeroclaw-data/web/dist
+# 复制 builder 阶段创建的完整运行时目录结构（包含 config.toml）
+COPY --from=builder /zeroclaw-data/.zeroclaw /zeroclaw-data/.zeroclaw
+COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
+# 确保权限正确（容器以 65534 用户运行）
+RUN chown -R 65534:65534 /zeroclaw-data
+
+# Environment setup
+# Ensure UTF-8 locale so CJK / multibyte input is handled correctly
+ENV LANG=C.UTF-8
+ENV ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace
+ENV HOME=/zeroclaw-data
+# Web dashboard path (highest priority, overrides config.toml)
+ENV ZEROCLAW_WEB_DIST_DIR=/zeroclaw-data/web/dist
+# Default provider and model are set in config.toml, not here,
+# so config file edits are not silently overridden
+ENV ZEROCLAW_GATEWAY_PORT=42617
+
+# API_KEY must be provided at runtime!
+
+WORKDIR /zeroclaw-data
+USER 65534:65534
+EXPOSE 42617
+HEALTHCHECK --interval=60s --timeout=10s --retries=3 --start-period=10s \
+    CMD ["zeroclaw", "status", "--format=exit-code"]
+ENTRYPOINT ["zeroclaw"]
+CMD ["daemon"]
