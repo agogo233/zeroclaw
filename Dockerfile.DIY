@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY Cargo.toml Cargo.lock locales.toml ./
 # Copy every workspace-member manifest; preserving directory structure is
 # required for Cargo workspace member detection.
-COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/build.rs crates/aardvark-sys/
+COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/
 COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
 COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
 COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
