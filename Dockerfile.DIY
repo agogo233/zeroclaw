@@ -4,7 +4,7 @@
 FROM rust:1.94-slim-bookworm AS builder
 
 WORKDIR /app
-ARG ZEROCLAW_CARGO_FEATURES="rag-pdf"
+ARG ZEROCLAW_CARGO_FEATURES="rag-pdf channel-wechat"
 
 # Install build dependencies and Node.js 22 (required for gen-api: npx openapi-typescript)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
