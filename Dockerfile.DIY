@@ -88,9 +88,9 @@ RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/regist
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
     if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
-      cargo build --release --locked --features "$ZEROCLAW_CARGO_FEATURES"; \
+      cargo build --release --locked -p zeroclawlabs --features "$ZEROCLAW_CARGO_FEATURES"; \
     else \
-      cargo build --release --locked; \
+      cargo build --release --locked -p zeroclawlabs; \
     fi
 
 # Generate API types for web (requires xtask to be built)
@@ -107,9 +107,9 @@ RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/regist
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
     if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
-      cargo build --release --locked --features "$ZEROCLAW_CARGO_FEATURES"; \
+      cargo build --release --locked -p zeroclawlabs --features "$ZEROCLAW_CARGO_FEATURES"; \
     else \
-      cargo build --release --locked; \
+      cargo build --release --locked -p zeroclawlabs; \
     fi && \
     cp target/release/zeroclaw /app/zeroclaw && \
     strip /app/zeroclaw
@@ -130,9 +130,10 @@ RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
          'port = 42617' \
          'host = "[::]"' \
          'allow_public_bind = true' \
-         'web_dist_dir = "/zeroclaw-data/web/dist"' \
+         'require_pairing = false' \
+         'web_dist_dir = "/usr/share/zeroclawlabs/web/dist"' \
          '' \
-        '[autonomy]' \
+        '[risk_profiles.default]' \
         'level = "supervised"' \
         'auto_approve = ["file_read", "file_write", "file_edit", "memory_recall", "memory_store", "web_search_tool", "web_fetch", "calculator", "glob_search", "content_search", "image_info", "weather", "git_operations"]' \
         > /zeroclaw-data/.zeroclaw/config.toml && \
@@ -167,7 +168,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
-COPY --from=web-builder /web/dist /zeroclaw-data/web/dist
+COPY --from=web-builder /web/dist /usr/share/zeroclawlabs/web/dist
 # 复制 builder 阶段创建的完整运行时目录结构（包含 config.toml）
 COPY --from=builder /zeroclaw-data/.zeroclaw /zeroclaw-data/.zeroclaw
 COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
@@ -180,7 +181,7 @@ ENV LANG=C.UTF-8
 ENV ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace
 ENV HOME=/zeroclaw-data
 # Web dashboard path (highest priority, overrides config.toml)
-ENV ZEROCLAW_WEB_DIST_DIR=/zeroclaw-data/web/dist
+ENV ZEROCLAW_WEB_DIST_DIR=/usr/share/zeroclawlabs/web/dist
 # Default provider and model are set in config.toml, not here,
 # so config file edits are not silently overridden
 ENV ZEROCLAW_GATEWAY_PORT=42617
