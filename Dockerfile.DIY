@@ -41,16 +41,12 @@ COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parse
 COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
 COPY crates/robot-kit/Cargo.toml crates/robot-kit/
 COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
-# apps/tauri: .dockerignore whitelists only Cargo.toml; src is stubbed below.
-COPY apps/tauri/Cargo.toml apps/tauri/
 # Create dummy targets for workspace root only; copy real sources for all internal crates.
-RUN mkdir -p src benches apps/tauri/src apps/zerocode/src src/bin tools/fill-translations/src \
+RUN mkdir -p src benches apps/zerocode/src src/bin tools/fill-translations/src \
     crates/zeroclaw-hardware/examples \
  && echo "fn main() {}" > src/main.rs \
  && echo "" > src/lib.rs \
  && echo "fn main() {}" > benches/agent_benchmarks.rs \
- && echo "fn main() {}" > apps/tauri/src/main.rs \
- && echo "fn main() {}" > apps/tauri/build.rs \
  && echo "fn main() {}" > apps/zerocode/src/main.rs \
  && echo "" > apps/zerocode/src/lib.rs \
  && echo "fn main() {}" > src/bin/zeroclaw-acp-bridge.rs \
