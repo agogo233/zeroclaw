@@ -33,6 +33,7 @@ COPY crates/zeroclaw-infra/Cargo.toml crates/zeroclaw-infra/
 COPY crates/zeroclaw-runtime/Cargo.toml crates/zeroclaw-runtime/
 COPY crates/zeroclaw-gateway/Cargo.toml crates/zeroclaw-gateway/
 COPY apps/zerocode/Cargo.toml apps/zerocode/
+COPY apps/tauri/Cargo.toml apps/tauri/
 COPY crates/zeroclaw-spawn/Cargo.toml crates/zeroclaw-spawn/
 COPY crates/zeroclaw-plugins/Cargo.toml crates/zeroclaw-plugins/
 COPY crates/zeroclaw-hardware/Cargo.toml crates/zeroclaw-hardware/
