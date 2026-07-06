@@ -49,14 +49,14 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ env.LOWER_NAME }}:latest
+ghcr.io/${{ env.LOWER_NAME }}:mod
 
 #ghcr.io/${{ env.LOWER_NAME }}:
 
-      - name: 打印 latest 镜像体积
+      - name: 打印 mod 镜像体积
         run: |
-          docker pull ghcr.io/${{ env.LOWER_NAME }}:latest --quiet
-          echo "latest 镜像体积: $(docker images ghcr.io/${{ env.LOWER_NAME }}:latest --format '{{.Size}}')"
+          docker pull ghcr.io/${{ env.LOWER_NAME }}:mod --quiet
+          echo "mod 镜像体积: $(docker images ghcr.io/${{ env.LOWER_NAME }}:mod --format '{{.Size}}')"
 
       - uses: actions/delete-package-versions@main
         with: 
