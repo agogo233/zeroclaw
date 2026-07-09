@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ── Stage 0: Build (match runtime glibc baseline) ───────────
-FROM rust:1.94-slim-bookworm AS builder
+FROM rust:1.96-slim-bookworm AS builder
 
 WORKDIR /app
 ARG ZEROCLAW_CARGO_FEATURES="default channel-wechat channel-qq browser-native"
