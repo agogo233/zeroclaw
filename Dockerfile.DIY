@@ -26,6 +26,7 @@ COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/
 COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
 COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
 COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
+COPY crates/zeroclaw-commands/Cargo.toml crates/zeroclaw-commands/
 COPY crates/zeroclaw-tools/Cargo.toml crates/zeroclaw-tools/
 COPY crates/zeroclaw-memory/Cargo.toml crates/zeroclaw-memory/
 COPY crates/zeroclaw-providers/Cargo.toml crates/zeroclaw-providers/
@@ -59,6 +60,7 @@ COPY crates/zeroclaw-api/src crates/zeroclaw-api/src
 COPY crates/zeroclaw-config/src crates/zeroclaw-config/src
 COPY crates/zeroclaw-config/fixtures crates/zeroclaw-config/fixtures
 COPY crates/zeroclaw-channels/src crates/zeroclaw-channels/src
+COPY crates/zeroclaw-commands/src crates/zeroclaw-commands/src
 COPY crates/zeroclaw-tools/src crates/zeroclaw-tools/src
 COPY crates/zeroclaw-memory/src crates/zeroclaw-memory/src
 COPY crates/zeroclaw-providers/src crates/zeroclaw-providers/src
