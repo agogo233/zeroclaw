@@ -42,6 +42,7 @@ COPY crates/zeroclaw-macros/Cargo.toml crates/zeroclaw-macros/
 COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parser/
 COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
 COPY crates/robot-kit/Cargo.toml crates/robot-kit/
+COPY crates/zeroclaw-sop-graph/Cargo.toml crates/zeroclaw-sop-graph/
 COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
 # Create dummy targets for workspace root only; copy real sources for all internal crates.
 RUN mkdir -p src benches apps/zerocode/src apps/tauri/src src/bin tools/fill-translations/src \
@@ -77,6 +78,7 @@ COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
 COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
 COPY crates/zeroclaw-macros/src crates/zeroclaw-macros/src
 COPY crates/zeroclaw-eval/src crates/zeroclaw-eval/src
+COPY crates/zeroclaw-sop-graph/src crates/zeroclaw-sop-graph/src
 COPY crates/zeroclaw-tool-call-parser/src crates/zeroclaw-tool-call-parser/src
 COPY crates/robot-kit/src crates/robot-kit/src
 COPY tools/fill-translations/Cargo.toml tools/fill-translations/
