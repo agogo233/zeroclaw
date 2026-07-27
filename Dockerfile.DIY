@@ -4,7 +4,7 @@
 FROM rust:1.96-slim-bookworm AS builder
 
 WORKDIR /app
-ARG ZEROCLAW_CARGO_FEATURES="default channel-wechat channel-qq browser-native"
+ARG ZEROCLAW_CARGO_FLAGS="--no-default-features --features acp-bridge,agent-runtime,default-channels,channel-wechat,channel-qq,gateway,observability-prometheus,schema-export,browser-native"
 
 # Install build dependencies and Node.js 22 (required for gen-api: npx openapi-typescript)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -89,8 +89,8 @@ COPY web/src/contexts/themes.json web/src/contexts/themes.json
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
-    if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
-      cargo build --release --locked -p zeroclawlabs --features "$ZEROCLAW_CARGO_FEATURES"; \
+    if [ -n "$ZEROCLAW_CARGO_FLAGS" ]; then \
+      cargo build --release --locked -p zeroclawlabs $ZEROCLAW_CARGO_FLAGS; \
     else \
       cargo build --release --locked -p zeroclawlabs; \
     fi
@@ -108,8 +108,8 @@ RUN touch src/main.rs src/lib.rs
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
-    if [ -n "$ZEROCLAW_CARGO_FEATURES" ]; then \
-      cargo build --release --locked -p zeroclawlabs --features "$ZEROCLAW_CARGO_FEATURES"; \
+    if [ -n "$ZEROCLAW_CARGO_FLAGS" ]; then \
+      cargo build --release --locked -p zeroclawlabs $ZEROCLAW_CARGO_FLAGS; \
     else \
       cargo build --release --locked -p zeroclawlabs; \
     fi && \
