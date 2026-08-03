@@ -103,16 +103,16 @@ WORKDIR /src
 COPY . .
 
 # Fetch all workspace dependencies (network available)
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch
 
 # Format + clippy (fully isolated — no network, reproducible)
 # -crt-static: the musl target defaults crt-static on, but host == target in
 # StageX, so proc-macro/build-script host artifacts cannot link statically.
 # This validates code correctness; the target static link is checked in build.
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --network=none \
     <<-EOF
     set -e
@@ -143,8 +143,8 @@ EOF
 #   compiled by rustdoc as host artifacts that hit the musl static-link wall,
 #   and the criterion bench links a C dep (alloca) that the static link
 #   rejects. Both run in the standard CI Test/Benchmarks jobs.
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     <<-EOF
     set -e
     export RUSTFLAGS="-C target-feature=-crt-static"
@@ -158,13 +158,13 @@ WORKDIR /src
 COPY . .
 
 # Fetch all workspace dependencies (network available)
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch
 
 # Offline build: release binaries (validation moved to check stage)
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --network=none \
     <<-EOF
     set -e
