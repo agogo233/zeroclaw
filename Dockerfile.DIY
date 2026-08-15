@@ -41,6 +41,8 @@ COPY crates/zeroclaw-hardware/Cargo.toml crates/zeroclaw-hardware/
 COPY crates/zeroclaw-macros/Cargo.toml crates/zeroclaw-macros/
 COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parser/
 COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
+COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-support/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-support/
+COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/
 COPY crates/robot-kit/Cargo.toml crates/robot-kit/
 COPY crates/zeroclaw-sop-graph/Cargo.toml crates/zeroclaw-sop-graph/
 COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
@@ -78,6 +80,8 @@ COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src crates/zeroclaw-
 COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
 COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
 COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
+COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-support/src crates/zeroclaw-log/tests/fixtures/attribution-macro-support/src
+COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/src crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/src
 COPY crates/zeroclaw-macros/src crates/zeroclaw-macros/src
 COPY crates/zeroclaw-eval/src crates/zeroclaw-eval/src
 COPY crates/zeroclaw-sop-graph/src crates/zeroclaw-sop-graph/src
