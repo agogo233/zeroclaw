@@ -76,13 +76,13 @@ RUN test -f /usr/lib/libunwind.so && ln -s libunwind.so /usr/lib/libgcc_s.so.1 |
 RUN npm ci --prefix web && npm install --prefix web lightningcss-linux-$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')-musl
 
 # Fetch cargo dependencies (network allowed)
-RUN --mount=type=cache,id=cargo-web-registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=cargo-web-git,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch --locked
 
 # Build the web dashboard (gen-api + typescript build), no network
-RUN --mount=type=cache,id=cargo-web-registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=cargo-web-git,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --network=none \
     <<-EOF
     set -e
@@ -244,13 +244,13 @@ COPY . .
 
 # Fetch all workspace dependencies (network available)
 # Shares cache with the build stage via mount target
-RUN --mount=type=cache,id=cargo-fat-registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=cargo-fat-git,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch
 
 # Offline build: release binaries with all channels
-RUN --mount=type=cache,id=cargo-fat-registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=cargo-fat-git,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --network=none \
     <<-EOF
     set -e
