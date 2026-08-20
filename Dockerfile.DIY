@@ -92,6 +92,7 @@ COPY xtask/ xtask/
 # Copy web/ for gen-api (needs package.json for npm install) and for zerocode build.rs
 COPY web/package.json web/package-lock.json* web/
 COPY web/src/contexts/themes.json web/src/contexts/themes.json
+COPY wit/ wit/
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
