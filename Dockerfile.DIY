@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY Cargo.toml Cargo.lock locales.toml ./
 # Copy every workspace-member manifest; preserving directory structure is
 # required for Cargo workspace member detection.
-COPY crates/aardvark-sys/Cargo.toml crates/aardvark-sys/
+# (aardvark-sys removed by upstream #9853)
 COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
 COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
 COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
@@ -43,7 +43,7 @@ COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parse
 COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
 COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-support/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-support/
 COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/
-COPY crates/robot-kit/Cargo.toml crates/robot-kit/
+# (robot-kit removed by upstream #9853)
 COPY crates/zeroclaw-sop-graph/Cargo.toml crates/zeroclaw-sop-graph/
 COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
 # Create dummy targets for workspace root only; copy real sources for all internal crates.
@@ -58,7 +58,7 @@ RUN mkdir -p src benches apps/zerocode/src apps/tauri/src src/bin tools/fill-tra
  && echo "fn main() {}" > src/bin/zeroclaw-acp-bridge.rs \
  && echo "fn main() {}" > tools/fill-translations/src/main.rs \
  && echo "fn main() {}" > crates/zeroclaw-hardware/examples/esp32_sim.rs
-COPY crates/aardvark-sys/src crates/aardvark-sys/src
+# (aardvark-sys src removed)
 COPY crates/zeroclaw-api/src crates/zeroclaw-api/src
 COPY crates/zeroclaw-config/src crates/zeroclaw-config/src
 COPY crates/zeroclaw-config/fixtures crates/zeroclaw-config/fixtures
@@ -86,7 +86,7 @@ COPY crates/zeroclaw-macros/src crates/zeroclaw-macros/src
 COPY crates/zeroclaw-eval/src crates/zeroclaw-eval/src
 COPY crates/zeroclaw-sop-graph/src crates/zeroclaw-sop-graph/src
 COPY crates/zeroclaw-tool-call-parser/src crates/zeroclaw-tool-call-parser/src
-COPY crates/robot-kit/src crates/robot-kit/src
+# (robot-kit src removed)
 COPY tools/fill-translations/Cargo.toml tools/fill-translations/
 COPY xtask/ xtask/
 # Copy web/ for gen-api (needs package.json for npm install) and for zerocode build.rs
