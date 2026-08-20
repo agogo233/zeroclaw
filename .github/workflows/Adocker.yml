@@ -62,7 +62,7 @@ jobs:
         with: 
           package-name: ${{ env.CONTAINER_NAME }}
           package-type: 'container'
-          min-versions-to-keep: 2
+          min-versions-to-keep: 6
           delete-only-untagged-versions: 'true'
 
   build-and-push-beta:
@@ -122,5 +122,5 @@ jobs:
         with: 
           package-name: ${{ env.CONTAINER_NAME }}
           package-type: 'container'
-          min-versions-to-keep: 2
+          min-versions-to-keep: 6
           delete-only-untagged-versions: 'true'
