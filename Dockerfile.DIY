@@ -4,7 +4,7 @@
 FROM rust:1.96-slim-bookworm AS builder
 
 WORKDIR /app
-ARG ZEROCLAW_CARGO_FLAGS="--no-default-features --features acp-bridge,agent-runtime,default-channels,channel-wechat,channel-qq,gateway,observability-prometheus,schema-export,browser-native"
+ARG ZEROCLAW_CARGO_FLAGS="--no-default-features --features acp-bridge,agent-runtime,default-channels,channel-wechat,channel-qq,gateway,observability-prometheus,schema-export,browser-native,plugins-wasm-cranelift,sandbox-landlock"
 
 # Install build dependencies and Node.js 22 (required for gen-api: npx openapi-typescript)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
