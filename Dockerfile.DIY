@@ -76,6 +76,12 @@ COPY apps/zerocode/src apps/zerocode/src
 COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src
 COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
 COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
 COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
