@@ -73,7 +73,6 @@ COPY crates/zeroclaw-runtime/src crates/zeroclaw-runtime/src
 COPY crates/zeroclaw-runtime/locales crates/zeroclaw-runtime/locales
 COPY crates/zeroclaw-gateway/src crates/zeroclaw-gateway/src
 COPY apps/zerocode/src apps/zerocode/src
-COPY apps/zerocode/build.rs apps/zerocode/
 COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src
@@ -89,9 +88,8 @@ COPY crates/zeroclaw-tool-call-parser/src crates/zeroclaw-tool-call-parser/src
 # (robot-kit src removed)
 COPY tools/fill-translations/Cargo.toml tools/fill-translations/
 COPY xtask/ xtask/
-# Copy web/ for gen-api (needs package.json for npm install) and for zerocode build.rs
+# Copy web/ for gen-api (needs package.json for npm install)
 COPY web/package.json web/package-lock.json* web/
-COPY web/src/contexts/themes.json web/src/contexts/themes.json
 COPY wit/ wit/
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
