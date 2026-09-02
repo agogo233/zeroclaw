@@ -46,16 +46,23 @@ COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/Cargo.toml cr
 # (robot-kit removed by upstream #9853)
 COPY crates/zeroclaw-sop-graph/Cargo.toml crates/zeroclaw-sop-graph/
 COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
+# Added by upstream #10142 (zerorelay secure transport)
+COPY crates/zeroclaw-tls/Cargo.toml crates/zeroclaw-tls/
+COPY crates/zeroclaw-relay-proto/Cargo.toml crates/zeroclaw-relay-proto/
+COPY apps/zerorelay/Cargo.toml apps/zerorelay/
 # Create dummy targets for workspace root only; copy real sources for all internal crates.
-RUN mkdir -p src benches apps/zerocode/src apps/tauri/src src/bin tools/fill-translations/src \
+# zerorelay is not built by `-p zeroclaw`; dummy targets only satisfy workspace loading.
+RUN mkdir -p src benches apps/zerocode/src apps/tauri/src apps/zerorelay/src src/bin tools/fill-translations/src \
     crates/zeroclaw-hardware/examples \
  && echo "fn main() {}" > src/main.rs \
  && echo "" > src/lib.rs \
  && echo "fn main() {}" > benches/agent_benchmarks.rs \
  && echo "fn main() {}" > apps/zerocode/src/main.rs \
  && echo "" > apps/zerocode/src/lib.rs \
- && echo "fn main() {}" > apps/tauri/src/main.rs \
- && echo "fn main() {}" > src/bin/zeroclaw-acp-bridge.rs \
+  && echo "fn main() {}" > apps/tauri/src/main.rs \
+  && echo "" > apps/zerorelay/src/lib.rs \
+  && echo "fn main() {}" > apps/zerorelay/src/main.rs \
+  && echo "fn main() {}" > src/bin/zeroclaw-acp-bridge.rs \
  && echo "fn main() {}" > tools/fill-translations/src/main.rs \
  && echo "fn main() {}" > crates/zeroclaw-hardware/examples/esp32_sim.rs
 # (aardvark-sys src removed)
@@ -84,6 +91,10 @@ COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/Cargo.toml crat
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/egress-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/egress-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/egress-fixture/src crates/zeroclaw-plugins/tests/fixtures/egress-fixture/src
+COPY crates/zeroclaw-tls/src crates/zeroclaw-tls/src
+COPY crates/zeroclaw-relay-proto/src crates/zeroclaw-relay-proto/src
 COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
 COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
 COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
