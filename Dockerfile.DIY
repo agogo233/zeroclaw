@@ -25,6 +25,8 @@ COPY Cargo.toml Cargo.lock locales.toml ./
 # (aardvark-sys removed by upstream #9853)
 COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
 COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
+# Added by upstream #10590 (zeroclaw-dist release-target registry)
+COPY crates/zeroclaw-dist/Cargo.toml crates/zeroclaw-dist/
 COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
 COPY crates/zeroclaw-commands/Cargo.toml crates/zeroclaw-commands/
 COPY crates/zeroclaw-tools/Cargo.toml crates/zeroclaw-tools/
@@ -80,6 +82,7 @@ COPY crates/zeroclaw-runtime/src crates/zeroclaw-runtime/src
 COPY crates/zeroclaw-runtime/locales crates/zeroclaw-runtime/locales
 COPY crates/zeroclaw-tools/locales crates/zeroclaw-tools/locales
 COPY crates/zeroclaw-gateway/src crates/zeroclaw-gateway/src
+COPY crates/zeroclaw-dist/src crates/zeroclaw-dist/src
 COPY apps/zerocode/src apps/zerocode/src
 COPY apps/zerocode/locales apps/zerocode/locales
 COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
