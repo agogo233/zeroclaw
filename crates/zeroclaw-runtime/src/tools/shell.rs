@@ -1,10 +1,11 @@
 use crate::platform::RuntimeAdapter;
 use crate::security::SecurityPolicy;
 use crate::security::traits::Sandbox;
-use crate::tools::shell_env::SAFE_SHELL_ENV_VARS;
+use crate::tools::shell_env::{ForwardedEnvironment, SAFE_SHELL_ENV_VARS};
 use async_trait::async_trait;
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::sync::Arc;
 use std::time::Duration;
 use zeroclaw_api::platform::is_android;
@@ -68,7 +69,18 @@ pub struct ShellTool {
     /// vars are overlaid on top of the safe-env snapshot, letting the user's
     /// real shell environment (PATH, credentials, etc.) reach subprocesses
     /// even though the daemon itself may have a stripped-down env.
-    tui_env: Option<HashMap<String, String>>,
+    ///
+    /// The value is an immutable [`ForwardedEnvironment`] (`Arc<HashMap>`): the
+    /// SAME handle is shared with the owning `Agent` and the RPC session so
+    /// admission can inspect the incarnation without copying values into a
+    /// second authorization cache. Behind a `RwLock` because a sealed registry
+    /// stores this tool inside an `Arc<dyn Tool>` (see `ArcDelegatingTool`): a
+    /// session RESUMED by a different connection re-derives this environment
+    /// through `rebind_forwarded_env(&self, ..)`, which needs interior
+    /// mutability since `&mut` cannot reach through the shared `Arc`. Rebinding
+    /// swaps the handle wholesale; it never mutates a map an in-flight turn is
+    /// already executing with.
+    tui_env: std::sync::RwLock<Option<ForwardedEnvironment>>,
     persistent_writes: bool,
 }
 
@@ -80,7 +92,7 @@ impl ShellTool {
             runtime,
             sandbox: Arc::new(crate::security::NoopSandbox),
             timeout_secs,
-            tui_env: None,
+            tui_env: std::sync::RwLock::new(None),
             persistent_writes: true,
         }
     }
@@ -96,7 +108,7 @@ impl ShellTool {
             runtime,
             sandbox,
             timeout_secs,
-            tui_env: None,
+            tui_env: std::sync::RwLock::new(None),
             persistent_writes: true,
         }
     }
@@ -116,7 +128,15 @@ impl ShellTool {
     /// Pass `Some(env)` to enable forwarding; `None` is a no-op (same as not
     /// calling this method at all).
     pub fn with_tui_env(mut self, env: Option<HashMap<String, String>>) -> Self {
-        self.tui_env = env;
+        self.tui_env = std::sync::RwLock::new(env.map(Arc::new));
+        self
+    }
+
+    /// Install an already-shared [`ForwardedEnvironment`] handle. Callers that
+    /// also hand the same `Arc` to the `Agent`/RPC session use this so the
+    /// tool, the agent and admission all observe one immutable map.
+    pub(crate) fn with_shared_tui_env(mut self, env: Option<ForwardedEnvironment>) -> Self {
+        self.tui_env = std::sync::RwLock::new(env);
         self
     }
 }
@@ -177,6 +197,25 @@ impl Tool for ShellTool {
 
     fn description(&self) -> &str {
         "Execute a shell command in the workspace directory"
+    }
+
+    /// Re-point the forwarded client environment for a REUSED shell tool. The
+    /// value passed in is already filtered for the current connection's
+    /// entitlement (empty = overlay nothing), so a session resumed by a
+    /// principal that no longer keeps a forwarded environment stops overlaying
+    /// the environment the first `initialize` captured. An empty map installs
+    /// `None` so `execute` skips the overlay branch entirely. Takes `&self` and
+    /// swaps through the `RwLock` because the sealed registry holds this tool
+    /// behind a shared `Arc`.
+    fn rebind_forwarded_env(&self, env: Option<std::collections::HashMap<String, String>>) {
+        // An empty map installs `None` so `execute` skips the overlay branch
+        // entirely; a non-empty map is wrapped in a fresh `Arc` and swapped in
+        // wholesale, so an in-flight turn keeps the handle it began with.
+        *self
+            .tui_env
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) =
+            env.filter(|map| !map.is_empty()).map(Arc::new);
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -250,10 +289,22 @@ impl Tool for ShellTool {
         // Execute with timeout to prevent hanging commands.
         // Clear the environment to prevent leaking API keys and other secrets
         // (CWE-200), then re-add only safe, functional variables.
-        let mut cmd = match self
-            .runtime
-            .build_shell_command(command, &self.security.workspace_dir)
-        {
+        // Snapshot once: session resume can rebind the value, so use the same
+        // environment for launcher resolution and the child process.
+        let tui_env_snapshot = self
+            .tui_env
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        let effective_path = tui_env_snapshot
+            .as_ref()
+            .and_then(|env| env.get("PATH"))
+            .map(OsStr::new);
+        let mut cmd = match self.runtime.build_shell_command_with_effective_path(
+            command,
+            &self.security.workspace_dir,
+            effective_path,
+        ) {
             Ok(cmd) => cmd,
             Err(e) => {
                 return Ok(ToolResult {
@@ -269,16 +320,18 @@ impl Tool for ShellTool {
         // Apply sandbox wrapping before execution.
         // The Sandbox trait operates on std::process::Command, so use as_std_mut
         // to get a mutable reference to the underlying command.
-        self.sandbox.wrap_command(cmd.as_std_mut()).map_err(|e| {
-            ::zeroclaw_log::record!(
-                ERROR,
-                ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Fail)
-                    .with_outcome(::zeroclaw_log::EventOutcome::Failure)
-                    .with_attrs(::serde_json::json!({"error": format!("{}", e)})),
-                "shell tool: sandbox wrap_command failed"
-            );
-            anyhow::Error::msg(format!("Sandbox error: {e}"))
-        })?;
+        self.sandbox
+            .wrap_shell_command(cmd.as_std_mut(), self.runtime.shell_program())
+            .map_err(|e| {
+                ::zeroclaw_log::record!(
+                    ERROR,
+                    ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Fail)
+                        .with_outcome(::zeroclaw_log::EventOutcome::Failure)
+                        .with_attrs(::serde_json::json!({"error": format!("{}", e)})),
+                    "shell tool: sandbox wrap_command failed"
+                );
+                anyhow::Error::msg(format!("Sandbox error: {e}"))
+            })?;
 
         cmd.env_clear();
 
@@ -296,8 +349,8 @@ impl Tool for ShellTool {
         // Overlay TUI env on top of the safe-env snapshot. TUI vars win on
         // conflict — the user's real PATH etc. should take precedence over
         // whatever the daemon process inherited.
-        if let Some(ref tui_env) = self.tui_env {
-            for (k, v) in tui_env {
+        if let Some(ref tui_env) = tui_env_snapshot {
+            for (k, v) in tui_env.iter() {
                 cmd.env(k, v);
             }
         }
@@ -308,8 +361,7 @@ impl Tool for ShellTool {
         // Detect Android at runtime (works for bionic and musl builds).
         if is_android() {
             let ambient = std::env::var("PATH").unwrap_or_default();
-            let tui_path = self
-                .tui_env
+            let tui_path = tui_env_snapshot
                 .as_ref()
                 .and_then(|env| env.get("PATH"))
                 .map(String::as_str);
@@ -922,7 +974,9 @@ mod tests {
         let runtime: Arc<dyn RuntimeAdapter> =
             Arc::new(NativeRuntime::with_shell("powershell".into()));
         let tool = ShellTool::new(security, runtime);
-        let command = "[Console]::Write('标准输出'); $bytes = [Text.Encoding]::UTF8.GetBytes('标准错误'); [Console]::OpenStandardError().Write($bytes, 0, $bytes.Length)";
+        // This full-script fixture is intentionally outside the bounded grammar.
+        // Emit UTF-8 bytes explicitly so this test isolates hidden redirected capture/decoding.
+        let command = "$stdout = [Text.Encoding]::UTF8.GetBytes('标准输出'); [Console]::OpenStandardOutput().Write($stdout, 0, $stdout.Length); $stderr = [Text.Encoding]::UTF8.GetBytes('标准错误'); [Console]::OpenStandardError().Write($stderr, 0, $stderr.Length)";
 
         let result = tool
             .execute(json!({"command": command, "approved": true}))
@@ -1506,6 +1560,68 @@ mod tests {
         })
     }
 
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn shell_preserves_inherited_powershell_cache_path() {
+        const CHILD: &str = "ZEROCLAW_SHELL_CACHE_TEST_CHILD";
+        const KEY: &str = "PSModuleAnalysisCachePath";
+        const VALUE: &str = r"C:\synthetic cache\ModuleAnalysisCache";
+
+        if let Ok(case) = std::env::var(CHILD) {
+            let expected = match case.as_str() {
+                "present" => Some(VALUE),
+                "absent" => None,
+                _ => panic!("unknown cache forwarding test case"),
+            };
+            assert_eq!(std::env::var(KEY).ok().as_deref(), expected);
+            let tool = ShellTool::new(
+                test_security_with_env_cmd(),
+                Arc::new(NativeRuntime::with_shell("cmd".into())),
+            );
+            let result = tool
+                .execute(json!({"command": format!("set {KEY}"), "approved": true}))
+                .await
+                .unwrap();
+            if let Some(value) = expected {
+                assert!(result.success, "{:?}", result.error);
+                assert_eq!(result.output.trim(), format!("{KEY}={value}"));
+            } else {
+                assert!(!result.success);
+                assert!(result.output.trim().is_empty());
+                assert!(result.error.as_deref().unwrap_or_default().contains(KEY));
+            }
+            return;
+        }
+
+        // Set the inherited value only on a separate harness process, never on
+        // the shared test process. cmd reads it without touching a cache file.
+        for case in ["present", "absent"] {
+            let mut child = tokio::process::Command::new(std::env::current_exe().unwrap());
+            child
+                .args([
+                    "--exact",
+                    "tools::shell::tests::shell_preserves_inherited_powershell_cache_path",
+                ])
+                .env(CHILD, case)
+                .kill_on_drop(true);
+            if case == "present" {
+                child.env(KEY, VALUE);
+            } else {
+                child.env_remove(KEY);
+            }
+            let output = tokio::time::timeout(std::time::Duration::from_secs(120), child.output())
+                .await
+                .expect("isolated cache test timed out")
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            assert!(output.status.success(), "{case}: {stdout}");
+            assert!(
+                stdout.contains("1 passed;"),
+                "exact child test was not executed: {stdout}"
+            );
+        }
+    }
+
     #[cfg(target_os = "windows")]
     fn env_print_command() -> &'static str {
         "set"
@@ -2001,6 +2117,78 @@ mod tests {
             env_output_contains_assignment(&result.output, "ZC_TUI_TEST_VAR", "tui_injected"),
             "tui_env var should appear in subprocess env, got:\n{}",
             result.output
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn effective_path_resolves_independent_native_runtime_launcher() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let launcher_dir = tempfile::tempdir().expect("launcher tempdir should be created");
+        let launcher = launcher_dir.path().join("tui-only-shell");
+        std::fs::write(
+            &launcher,
+            "#!/bin/sh\necho TUI_PATH_SHIM_RAN\nfor arg in \"$@\"; do echo \"arg:$arg\"; done\n",
+        )
+        .expect("recording shell should be written");
+        std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o755))
+            .expect("recording shell should be executable");
+        let split_path = std::env::join_paths([
+            std::path::PathBuf::new(),
+            std::path::PathBuf::from("relative-decoy"),
+            launcher_dir.path().to_path_buf(),
+        ])
+        .expect("test PATH should be joined")
+        .into_string()
+        .expect("test PATH should be UTF-8");
+
+        let tool = ShellTool::new(
+            unrestricted_shell_test_security(),
+            Arc::new(NativeRuntime::with_shell("tui-only-shell".into())),
+        )
+        .with_tui_env(Some(HashMap::from([("PATH".into(), split_path)])));
+        let result = tool
+            .execute(json!({"command": "echo direct_tui_path"}))
+            .await
+            .expect("shell tool should return a result");
+
+        assert!(
+            result.success && result.output.contains("TUI_PATH_SHIM_RAN"),
+            "TUI-only launcher should execute, got output={:?} error={:?}",
+            result.output,
+            result.error
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn effective_path_with_no_absolute_entries_fails_closed() {
+        let unusable_path = std::env::join_paths([
+            std::path::PathBuf::new(),
+            std::path::PathBuf::from("relative-only"),
+        ])
+        .expect("test PATH should be joined")
+        .into_string()
+        .expect("test PATH should be UTF-8");
+        let tool = ShellTool::new(
+            unrestricted_shell_test_security(),
+            Arc::new(NativeRuntime::with_shell("tui-only-shell".into())),
+        )
+        .with_tui_env(Some(HashMap::from([("PATH".into(), unusable_path)])));
+        let result = tool
+            .execute(json!({"command": "echo must_not_run"}))
+            .await
+            .expect("shell tool should return a failed result");
+
+        assert!(!result.success, "unusable TUI PATH must fail closed");
+        assert!(
+            result
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("effective child PATH")),
+            "unexpected error: {:?}",
+            result.error
         );
     }
 

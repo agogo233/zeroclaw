@@ -217,8 +217,6 @@ keyactions! {
         QueueCopy               [Chord::with(KeyCode::Char('c'), KeyModifiers::ALT)] => "copy queued",
         QueueDelete             [Chord::with(KeyCode::Char('x'), KeyModifiers::ALT)] => "delete queued",
         QueueEdit               [Chord::with(KeyCode::Char('e'), KeyModifiers::ALT)] => "edit queued",
-        QueueWiden              [Chord::shift(KeyCode::Left)] => "widen queue",
-        QueueNarrow             [Chord::shift(KeyCode::Right)] => "narrow queue",
         ErrorDismiss            [Chord::char('q')] => "dismiss error",
     }
 }
@@ -242,6 +240,8 @@ keyactions! {
         ToggleFollow     [Chord::char('f')] => "toggle follow",
         BeginSearch      [Chord::char('/')] => "search",
         ClearSearch      [Chord::char('c')] => "clear search",
+        BeginRunFilter   [Chord::char('r')] => "filter by SOP run",
+        ClearRunFilter   [Chord::char('R')] => "clear SOP run filter",
         CopyDetail       [Chord::char('y')] => "copy detail",
         CopySelection    [
             Chord::with(KeyCode::Char('c'), KeyModifiers::SUPER),
