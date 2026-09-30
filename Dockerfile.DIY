@@ -103,6 +103,10 @@ COPY crates/zeroclaw-plugins/tests/fixtures/egress-fixture/src crates/zeroclaw-p
 # Added by upstream (channel egress component fixture)
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/src
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/
+COPY crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/src
 COPY crates/zeroclaw-tls/src crates/zeroclaw-tls/src
 COPY crates/zeroclaw-relay-proto/src crates/zeroclaw-relay-proto/src
 COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
