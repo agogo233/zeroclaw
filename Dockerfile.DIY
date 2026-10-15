@@ -133,6 +133,10 @@ COPY xtask/ xtask/
 # Copy web/ for gen-api (needs package.json for npm install)
 COPY web/package.json web/package-lock.json* web/
 COPY wit/ wit/
+# Added by upstream #11528 (terminal EOF/error backport patches crossterm to a vendored copy)
+COPY vendor/crossterm-0.29.0/ vendor/crossterm-0.29.0/
+# Root crate declares [[test]] targets; copy tests/ so manifests parse
+COPY tests/ tests/
 RUN --mount=type=cache,id=zeroclaw-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=zeroclaw-cargo-git,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,id=zeroclaw-target,target=/app/target,sharing=locked \
