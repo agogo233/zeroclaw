@@ -12,6 +12,11 @@ pub(crate) struct Acp {
 }
 
 impl Acp {
+    #[cfg(test)]
+    pub(crate) fn from_chat_for_test(inner: chat::Chat) -> Self {
+        Self { inner }
+    }
+
     pub(crate) fn new(rpc: Arc<RpcClient>) -> Self {
         Self {
             inner: chat::Chat::new(rpc, chat::PaneKind::Acp),
@@ -169,8 +174,12 @@ impl Acp {
         self.inner.in_browse_mode()
     }
 
-    pub(crate) fn wants_quit_chord(&self) -> bool {
-        self.inner.wants_quit_chord()
+    pub(crate) fn wants_quit_chord(&self, key: &KeyEvent) -> bool {
+        self.inner.wants_quit_chord(key)
+    }
+
+    pub(crate) fn copy_composer_selection(&self, key: &KeyEvent) -> bool {
+        self.inner.copy_composer_selection(key)
     }
 
     pub(crate) fn take_help_request(&mut self) -> bool {
@@ -193,7 +202,7 @@ impl Acp {
         self.inner.handle_paste(text);
     }
 
-    pub(crate) fn ctx_tokens(&self) -> (Option<u64>, Option<u64>, Option<u64>) {
+    pub(crate) fn ctx_tokens(&self) -> (Option<u64>, Option<String>, Option<u64>, Option<u64>) {
         self.inner.ctx_tokens()
     }
 
@@ -203,6 +212,10 @@ impl Acp {
 
     pub(crate) fn current_cwd(&self) -> Option<&str> {
         self.inner.current_cwd()
+    }
+
+    pub(crate) fn info_message(&mut self) -> Option<&crate::widgets::InfoMessage> {
+        self.inner.info_message()
     }
 }
 
