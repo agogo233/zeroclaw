@@ -92,6 +92,8 @@ COPY apps/zerocode/locales apps/zerocode/locales
 COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
 # crates/zeroclaw-plugins/wit is a symlink to repo-root wit/ (wit-bindgen path "wit/v0")
 COPY crates/zeroclaw-plugins/wit crates/zeroclaw-plugins/wit
+# Added by upstream (sign_manifest example declared in zeroclaw-plugins manifest)
+COPY crates/zeroclaw-plugins/examples crates/zeroclaw-plugins/examples
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-fixture/
