@@ -20,6 +20,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # 1. Copy manifests to cache dependencies
 COPY Cargo.toml Cargo.lock locales.toml ./
+# Root build.rs stamps ZEROCLAW_VERSION (read via env! in src); must exist for cargo to run it
+COPY build.rs ./
 # Copy every workspace-member manifest; preserving directory structure is
 # required for Cargo workspace member detection.
 # (aardvark-sys removed by upstream #9853)
