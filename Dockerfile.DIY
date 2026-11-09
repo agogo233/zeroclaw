@@ -1,12 +1,12 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7-labs
 
 # ── Stage 0: Build (match runtime glibc baseline) ───────────
 FROM rust:1.98-slim-bookworm AS builder
 
 WORKDIR /app
-ARG ZEROCLAW_CARGO_FLAGS="--no-default-features --features acp-bridge,agent-runtime,default-channels,channel-wechat,channel-qq,gateway,observability-prometheus,schema-export,browser-native,plugins-wasm-cranelift,sandbox-landlock"
+ARG ZEROCLAW_CARGO_FLAGS="--no-default-features --features acp-bridge,agent-runtime,default-channels,channel-wechat,channel-qq,gateway,observability-prometheus,schema-export,browser-native,plugins-wasm-cranelift,sandbox-landlock,tool-opencode-cli"
 
-# Install build dependencies and Node.js 22 (required for gen-api: npx openapi-typescript)
+# Install build dependencies and Node.js 24 (required for gen-api: npx openapi-typescript)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y \
@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         curl \
         g++ \
         cmake \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,39 +22,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY Cargo.toml Cargo.lock locales.toml ./
 # Root build.rs stamps ZEROCLAW_VERSION (read via env! in src); must exist for cargo to run it
 COPY build.rs ./
-# Copy every workspace-member manifest; preserving directory structure is
-# required for Cargo workspace member detection.
-# (aardvark-sys removed by upstream #9853)
-COPY crates/zeroclaw-api/Cargo.toml crates/zeroclaw-api/
-# Added by upstream #11196 (zeroclaw-buildinfo build provenance)
-COPY crates/zeroclaw-buildinfo/Cargo.toml crates/zeroclaw-buildinfo/
-COPY crates/zeroclaw-config/Cargo.toml crates/zeroclaw-config/
-# Added by upstream #10590 (zeroclaw-dist release-target registry)
-COPY crates/zeroclaw-dist/Cargo.toml crates/zeroclaw-dist/
-COPY crates/zeroclaw-channels/Cargo.toml crates/zeroclaw-channels/
-COPY crates/zeroclaw-commands/Cargo.toml crates/zeroclaw-commands/
-COPY crates/zeroclaw-tools/Cargo.toml crates/zeroclaw-tools/
-COPY crates/zeroclaw-memory/Cargo.toml crates/zeroclaw-memory/
-COPY crates/zeroclaw-providers/Cargo.toml crates/zeroclaw-providers/
-COPY crates/zeroclaw-infra/Cargo.toml crates/zeroclaw-infra/
-COPY crates/zeroclaw-runtime/Cargo.toml crates/zeroclaw-runtime/
-COPY crates/zeroclaw-gateway/Cargo.toml crates/zeroclaw-gateway/
+# Copy every workspace-member manifest in one glob; --parents preserves the
+# crates/<name>/Cargo.toml directory structure. Adding a crate no longer
+# requires editing this file. crates/*/tests/fixtures/*/ are matched by their
+# own glob; apps/* manifests are stable and listed explicitly.
+COPY --parents crates/*/Cargo.toml ./
+COPY --parents crates/*/tests/fixtures/*/Cargo.toml ./
 COPY apps/zerocode/Cargo.toml apps/zerocode/
 COPY apps/tauri/Cargo.toml apps/tauri/
-COPY crates/zeroclaw-spawn/Cargo.toml crates/zeroclaw-spawn/
-COPY crates/zeroclaw-plugins/Cargo.toml crates/zeroclaw-plugins/
-COPY crates/zeroclaw-hardware/Cargo.toml crates/zeroclaw-hardware/
-COPY crates/zeroclaw-macros/Cargo.toml crates/zeroclaw-macros/
-COPY crates/zeroclaw-tool-call-parser/Cargo.toml crates/zeroclaw-tool-call-parser/
-COPY crates/zeroclaw-log/Cargo.toml crates/zeroclaw-log/
-COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-support/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-support/
-COPY crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/Cargo.toml crates/zeroclaw-log/tests/fixtures/attribution-macro-consumer/
-# (robot-kit removed by upstream #9853)
-COPY crates/zeroclaw-sop-graph/Cargo.toml crates/zeroclaw-sop-graph/
-COPY crates/zeroclaw-eval/Cargo.toml crates/zeroclaw-eval/
-# Added by upstream #10142 (zerorelay secure transport)
-COPY crates/zeroclaw-tls/Cargo.toml crates/zeroclaw-tls/
-COPY crates/zeroclaw-relay-proto/Cargo.toml crates/zeroclaw-relay-proto/
 COPY apps/zerorelay/Cargo.toml apps/zerorelay/
 # Create dummy targets for workspace root only; copy real sources for all internal crates.
 # zerorelay is not built by `-p zeroclaw`; dummy targets only satisfy workspace loading.
@@ -96,29 +71,18 @@ COPY crates/zeroclaw-plugins/src crates/zeroclaw-plugins/src
 COPY crates/zeroclaw-plugins/wit crates/zeroclaw-plugins/wit
 # Added by upstream (sign_manifest example declared in zeroclaw-plugins manifest)
 COPY crates/zeroclaw-plugins/examples crates/zeroclaw-plugins/examples
-COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-sequential-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-sequential-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-sequential-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-sequential-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/memory-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/memory-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/memory-fixture/src crates/zeroclaw-plugins/tests/fixtures/memory-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-timeout-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-secret-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/egress-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/egress-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/egress-fixture/src crates/zeroclaw-plugins/tests/fixtures/egress-fixture/src
 # Added by upstream (channel egress component fixture)
-COPY crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-egress-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-socket-fixture/src
-COPY crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/src crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/src
 # Added by upstream #11303 (channel websocket lifecycle fixture)
-COPY crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/Cargo.toml crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/src
 COPY crates/zeroclaw-tls/src crates/zeroclaw-tls/src
 COPY crates/zeroclaw-relay-proto/src crates/zeroclaw-relay-proto/src
@@ -174,22 +138,29 @@ RUN size=$(stat -c%s /app/zeroclaw) && \
     if [ "$size" -lt 1000000 ]; then echo "ERROR: binary too small (${size} bytes), likely dummy build artifact" && exit 1; fi
 
 # Prepare runtime directory structure and default config inline (no extra stage).
-RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
+RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/data && \
     printf '%s\n' \
-        'workspace_dir = "/zeroclaw-data/workspace"' \
-        'config_path = "/zeroclaw-data/.zeroclaw/config.toml"' \
-        'api_key = ""' \
-        'default_provider = "openrouter"' \
-        'default_model = "anthropic/claude-sonnet-4-20250514"' \
-        'default_temperature = 0.7' \
+        'schema_version = 4' \
         '' \
-         '[gateway]' \
-         'port = 42617' \
-         'host = "[::]"' \
-         'allow_public_bind = true' \
-         'require_pairing = false' \
-         'web_dist_dir = "/usr/share/zeroclawlabs/web/dist"' \
-         '' \
+        '[gateway]' \
+        'port = 42617' \
+        'host = "[::]"' \
+        'allow_public_bind = true' \
+        'require_pairing = false' \
+        'web_dist_dir = "/usr/share/zeroclawlabs/web/dist"' \
+        '' \
+        '[providers.models.openrouter.default]' \
+        'api_key = ""' \
+        'model = "anthropic/claude-sonnet-4-20250514"' \
+        'temperature = 0.7' \
+        '' \
+        '[agents.default]' \
+        'model_provider = "openrouter.default"' \
+        'risk_profile = "default"' \
+        'runtime_profile = "default"' \
+        '' \
+        '[runtime_profiles.default]' \
+        '' \
         '[risk_profiles.default]' \
         'level = "supervised"' \
         'auto_approve = ["file_read", "file_write", "file_edit", "memory_recall", "memory_store", "web_search_tool", "web_fetch", "calculator", "glob_search", "content_search", "image_info", "weather", "git_operations"]' \
@@ -197,7 +168,7 @@ RUN mkdir -p /zeroclaw-data/.zeroclaw /zeroclaw-data/workspace && \
     chown -R 65534:65534 /zeroclaw-data
 
 # ── Stage 1: Frontend build ─────────────────────────────────────
-FROM node:22-alpine AS web-builder
+FROM node:24-alpine AS web-builder
 WORKDIR /web
 ENV NPM_CONFIG_CACHE=/root/.npm
 COPY web/package.json web/package-lock.json* web/ ./
@@ -230,14 +201,14 @@ COPY --from=builder /app/zeroclaw /usr/local/bin/zeroclaw
 COPY --from=web-builder /web/dist /usr/share/zeroclawlabs/web/dist
 # 复制 builder 阶段创建的完整运行时目录结构（包含 config.toml）
 COPY --from=builder /zeroclaw-data/.zeroclaw /zeroclaw-data/.zeroclaw
-COPY --from=builder /zeroclaw-data/workspace /zeroclaw-data/workspace
+COPY --from=builder /zeroclaw-data/data /zeroclaw-data/data
 # 确保权限正确（容器以 65534 用户运行）
 RUN chown -R 65534:65534 /zeroclaw-data
 
 # Environment setup
 # Ensure UTF-8 locale so CJK / multibyte input is handled correctly
 ENV LANG=C.UTF-8
-ENV ZEROCLAW_WORKSPACE=/zeroclaw-data/workspace
+ENV ZEROCLAW_DATA_DIR=/zeroclaw-data/data
 ENV HOME=/zeroclaw-data
 # Web dashboard path (highest priority, overrides config.toml)
 ENV ZEROCLAW_WEB_DIST_DIR=/usr/share/zeroclawlabs/web/dist
