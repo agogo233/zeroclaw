@@ -86,6 +86,8 @@ COPY crates/zeroclaw-plugins/tests/fixtures/tool-websocket-fixture/src crates/ze
 COPY crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/src crates/zeroclaw-plugins/tests/fixtures/channel-websocket-fixture/src
 COPY crates/zeroclaw-tls/src crates/zeroclaw-tls/src
 COPY crates/zeroclaw-relay-proto/src crates/zeroclaw-relay-proto/src
+COPY crates/zeroclaw-rpc-proto/src crates/zeroclaw-rpc-proto/src
+COPY crates/zeroclaw-rpc-client/src crates/zeroclaw-rpc-client/src
 COPY crates/zeroclaw-hardware/src crates/zeroclaw-hardware/src
 COPY crates/zeroclaw-hardware/examples crates/zeroclaw-hardware/examples
 COPY crates/zeroclaw-log/src crates/zeroclaw-log/src
